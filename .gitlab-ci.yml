@@ -48,9 +48,6 @@ deploy_container:
   image: alpine:latest
   stage: deploy
   when: manual  # Manually trigger stage via GitLab UI
-  variables:
-    IP: $DEPLOY_IP
-    USER: $DEPLOY_USER
   before_script:
     # Update the package index, install the OpenSSH client for SSH connections
     - apk update && apk add openssh-client
@@ -58,13 +55,13 @@ deploy_container:
     - if [ -f "$ID_RSA" ]; then chmod og= $ID_RSA; fi
   script:
     #  SSH into the deployment server, log in to the GitLab Container registry
-    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $USER@$IP "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_IP "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
      # SSH into the deployment server, pull the image from the registry
-    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $USER@$IP "docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_IP "docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
     # SSH into the deployment server, remove the existing container (if it exists)
-    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $USER@$IP "docker container rm -f $CONTAINER_NAME || true"
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_IP "docker container rm -f $CONTAINER_NAME || true"
     # SSH into the deployment server, run the new container
-    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $USER@$IP "docker run -d -p $DEPLOY_PORT:$DEPLOY_PORT --restart=unless-stopped --name $CONTAINER_NAME $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_IP "docker run -d -p $DEPLOY_PORT:$DEPLOY_PORT --restart=unless-stopped --name $CONTAINER_NAME $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
   rules:
     # Rule: Run this job only for main branch
     - if: $CI_COMMIT_BRANCH == "main"
